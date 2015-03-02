@@ -13,7 +13,7 @@ import sqlite3 as lite
 import numpy as np
 from scipy import stats
 import json
-#import geocode
+
 
 					
 "translate the unique time to readable date"
@@ -113,20 +113,8 @@ def insert_city_time_series():
 
 #insert_city_time_series()
 
-# get the hour time series, need to sum all the days count, then insert into db?
 
 
-
-
-
-########################### the following program is to calculate absent score two:  zscore(14) for absenteeism ##############
-# to complement the missing counts, add their time, and set count to be 0
-# first, sum all the days' counts, then complement the missing days.
-
-
-
-
-############################################################### prepare for wavelet 
 # step 1, convert all the count from score.db into files
 def get_time_interval(begin_day, end_day):
 	time_interval = []
@@ -281,149 +269,6 @@ def get_wavelet_score():
 		
 					
 get_wavelet_score()	
-
-
-
-"""
-def read_db_30min_city(begin_day, end_day):
-	time_list = get_time_interval(begin_day, end_day)
-	con = lite.connect("/home/jf/Documents/EMBERS/GPS_tag/wavelet/score.db")
-	
-	for loc in os.listdir("/home/jf/Documents/EMBERS/GPS_tag/algorithm/daily_city_object_Dec_2013"):
-		try:
-
-			result = {}
-			for time in time_list:
-				result[time] = {}
-				result[time]["daynum"] = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S' ).weekday()
-				result[time]["count"] = 100
-				#fix_time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
-
-				sql = "select count, daynum from t_city where location='{}' and created_at='{}' ".format(loc, time)
-				with con:
-					cur = con.cursor()
-					cur.execute(sql)
-					rows = cur.fetchall()
-					for row in rows:
-						if row[0]:
-							result[time]["count"] = result[time]["count"] + int(row[1])		
-			
-					
-			location_file = "./30minutes_location_object/%s" % f_name		
-			with open(location_file, "w") as out:
-				out.write(json.dumps(result))
-		except:
-			print sys.exc_info()
-
-#import datetime
-#print datetime.datetime.now()
-#read_db_30min_city("2014-04-01", "2014-04-02")
-#print datetime.datetime.now()
-
-
-
-# too slow
-# I calculate zscore(14) from score.db, but write the zscore into "certain_time_absent_two.json"
-# I am using "created_at" as key
-def certain_time_absent_score_two( begin_day, end_day ):
-	con = lite.connect("/home/jf/Documents/EMBERS/GPS_tag/wavelet/score.db")
-	time_list = get_time_interval(begin_day, end_day)
-	result = {}
-
-	for loc in os.listdir("/home/jf/Documents/EMBERS/GPS_tag/algorithm/daily_city_object_Dec_2013"):
-		for cal_time in time_list:
-			#loc = loc.decode("utf-8")									
-			try:
-				one_month = []
-				end_fix = 0
-				fix_day = datetime.datetime.strptime(cal_time, '%Y-%m-%d %H:%M:%S')
-				fix_format = cal_time.split(" ")[1]
-
-				if fix_day.weekday() < 5:	
-					sql = "select count from t_city where location='{}' and created_at<='{}' and created_at like '%{}' and daynum < 5 order by created_at desc limit '{}' ".format(loc, cal_time, fix_format, 20) 
-				elif fix_day.weekday() > 4:
-					sql = "select count from t_city where location='{}' and created_at<='{}' and created_at like '%{}' and daynum >4 order by created_at desc limit '{}' ".format(loc, cal_time, fix_format, 8)
-
-				with con:
-					cur = con.cursor()
-					cur.execute(sql)
-					rows = cur.fetchall()
-
-					for row in rows:
-						if row[0]:
-							one_month.append(row[0]+100)
-						else:
-							one_month.append(100)
-				ar = np.array(one_month)
-
-				if np.std(ar):		
-					end_fix = stats.zscore(ar)[0] # the zscore of the end_day at fix_time					
-
-				if loc not in result:
-					result[loc] = {}
-					result[loc][cal_time] = end_fix
-				else:
-					if cal_time not in result[loc]:
-						result[loc][cal_time] = end_fix
-					
-			except:
-				#print sys.exc_info()			
-				continue
-	with open("./absent_two_20140401_20140401_30minutes.json", "w") as out:
-		out.write(json.dumps(result))
-
-
-#certain_time_absent_score_two("2014-04-01", "2014-04-02")
-#time_list = get_time_interval("2013-12-01", "2013-12-03")
-	#time_list = ["2013-12-02 19:30:00", "2013-12-02 19:35:00", "2013-12-02 19:40:00", "2013-12-02 19:45:00", "2013-12-02 19:50:00", "2013-12-02 19:55:00", "2013-12-02 20:00:00", "2013-12-02 20:05:00", "2013-12-02 20:10:00", "2013-12-02 20:15:00", "2013-12-02 20:20:00", "2013-12-02 20:25:00", "2013-12-02 20:30:00", "2013-12-02 20:35:00", "2013-12-02 20:40:00", "2013-12-02 20:45:00", "2013-12-02 20:50:00", "2013-12-02 20:55:00", "2013-12-02 21:00:00", "2013-12-02 22:05:00", "2013-12-02 22:10:00", "2013-12-02 22:15:00", "2013-12-02 22:20:00", "2013-12-02 22:25:00", "2013-12-02 22:30:00", "2013-12-02 22:35:00", "2013-12-02 22:40:00", "2013-12-02 22:45:00", "2013-12-02 22:50:00", "2013-12-02 22:55:00" ]
-
-"""
-
-
-
-
-
-
-
-########################### the following program is to calculate absenteeism one ##############
-"test period: Dec 2013, 31 days"
-"using Theodoros Lappas method to calculate absenteeism score"
-def get_absent_score_one():
-	for f_name in os.listdir("/home/jf/Documents/EMBERS/GPS_tag/algorithm/city_object_Dec2013"):
-		try:
-			with open("/home/jf/Documents/EMBERS/GPS_tag/algorithm/city_object_Dec2013/" + f_name) as ff:
-				result = json.load( ff)				
-				sum_count = 0				
-				for key in result:					
-					sum_count = sum_count + int(result[key]["count"])
-				for k in result:
-					result[k]["absent_one"] = float(result[k]["count"])/sum_count - float(1)/(31*48)
-				location_file = "/home/jf/Documents/EMBERS/GPS_tag/algorithm/absent_one_Dec2013/%s" % f_name			
-				with open(location_file, "w") as out:
-					out.write(json.dumps(result))
-		except:
-			print sys.exc_info()
-
-
-def convert_city_file():
-	for f_name in os.listdir("/home/jf/Documents/EMBERS/GPS_tag/algorithm/city_time_series_Dec2013"):
-		try:
-			with open("/home/jf/Documents/EMBERS/GPS_tag/algorithm/city_time_series_Dec2013/" + f_name) as ff:
-				result = {}
-				for line in ff:
-					record = {}
-					record = json.loads(line)
-					created_at = record["created_at"]					
-					if created_at not in result:
-						result[created_at]={}
-						result[created_at]["count"] = record["count"]
-						result[created_at]["daynum"] = record["daynum"]
-				location_file = "./city_object_Dec2013/%s" % f_name		
-				with open(location_file, "w") as out:
-					out.write(json.dumps(result))
-		except:
-			print sys.exc_info()
-
 
 
 
